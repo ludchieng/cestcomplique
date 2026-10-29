@@ -16,10 +16,10 @@
 :root[data-theme="dark"]{color-scheme:dark}
 
 *{box-sizing:border-box}
-html{background:var(--bg)}
+html{background:var(--bg);-webkit-tap-highlight-color:transparent}
 body{
   margin:0;min-height:100vh;
-  background:radial-gradient(120% 60% at 85% 0%,var(--bg3) 0%,var(--bg2) 50%,var(--bg) 100%) fixed,var(--bg);
+  background:var(--bg);
   color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;
   padding-left:max(16px,env(safe-area-inset-left,0px));
   padding-right:max(16px,env(safe-area-inset-right,0px));
@@ -33,7 +33,11 @@ h1:focus,h2:focus{outline:none}
 .ic-h{width:16px;height:16px;flex:none;fill:currentColor}
 
 /* Décor : halos flous, fils dessinés à la main, grain */
-.sky{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+/* Le décor prend la plus grande hauteur d’écran (barre d’adresse repliée) : il ne bouge pas quand
+   la barre de Chrome mobile apparaît ou disparaît au défilement. Le dégradé du fond vit ici aussi,
+   plutôt qu’en background-attachment: fixed, que Chrome mobile repeint mal. */
+.sky{position:fixed;top:0;left:0;right:0;height:100vh;height:100lvh;pointer-events:none;z-index:0;overflow:hidden;
+  background:radial-gradient(120% 60% at 85% 0%,var(--bg3) 0%,var(--bg2) 50%,var(--bg) 100%) var(--bg)}
 .halo{position:absolute;border-radius:50%;filter:blur(40px);animation:breathe 18s ease-in-out infinite alternate}
 .halo.h1{width:70vmax;height:70vmax;top:-34vmax;right:-28vmax;background:radial-gradient(circle,rgba(184,69,91,.28),transparent 62%)}
 .halo.h2{width:60vmax;height:60vmax;bottom:-30vmax;left:-26vmax;background:radial-gradient(circle,rgba(224,164,58,.13),transparent 62%);animation-delay:-7s}

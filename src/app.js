@@ -4113,11 +4113,12 @@ export function start() {
           labGoto(b.dataset.q);
           break;
         case "pron":
+          /* Mise à jour sur place : redessiner l’accueil faisait clignoter la carte sur Chrome mobile. */
           state.pron = b.dataset.p;
           save();
-          refocus = keepFocus(b);
-          render(false);
-          refocus();
+          view.querySelectorAll('[data-act="pron"]').forEach(function (x) {
+            x.setAttribute("aria-checked", String(x.dataset.p === state.pron));
+          });
           break;
         case "theme": {
           const el = document.getElementById("th-" + b.dataset.ax);
