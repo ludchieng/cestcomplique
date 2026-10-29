@@ -2061,6 +2061,7 @@ export function start() {
     else if (state.idx === "lab") renderLab(anim);
     else renderQuestion(anim);
     renderTop();
+    syncHistory();
   }
   function asked() {
     return Q.filter(function (q) {
@@ -3899,6 +3900,8 @@ export function start() {
       const b = e.target.closest("[data-act]");
       if (!b || b.disabled) return;
       const act = b.dataset.act;
+      const before = state.idx;
+      if (HAPTIC_PICK.indexOf(act) >= 0) haptic();
       if (
         act.indexOf("l-") === 0 &&
         ["l-pane", "l-reset", "l-goto"].indexOf(act) < 0
@@ -3989,7 +3992,7 @@ export function start() {
           next();
           break;
         case "back":
-          back();
+          goBackTo(backTarget(), back);
           break;
         case "skip":
           skip();
@@ -4054,12 +4057,17 @@ export function start() {
           }
           break;
         }
-        case "results":
-          state.idx = "results";
-          save();
-          render();
-          toTop();
+        case "results": {
+          const showResults = function () {
+            state.idx = "results";
+            save();
+            render();
+            toTop();
+          };
+          if (state.idx === "lab") goBackTo({ idx: "results", sub: 0 }, showResults);
+          else showResults();
           break;
+        }
         case "home":
           state.idx = -1;
           save();
@@ -4164,6 +4172,9 @@ export function start() {
           break;
         }
       }
+      /* Avancer d’une étape : un tic léger ; arriver au bilan : un tic plus marqué. */
+      if (act === "next" || act === "skip")
+        haptic(state.idx === "results" && before !== "results");
     },
     on,
   );
@@ -4188,30 +4199,122 @@ export function start() {
     on,
   );
 
-  /* ---------- Bouton retour du navigateur ou du téléphone ----------
-   Une entrée « garde » reste en haut de l’historique : chaque retour revient sur l’entrée de base,
-   on recule d’une étape dans l’app, puis on remet la garde. Sur l’accueil, le retour quitte le site. */
+  /* ---------- Retour haptique ----------
+     Android : navigator.vibrate. iPhone (iOS 18 et plus) : Safari n’a pas cette API, mais activer
+     un interrupteur natif caché (<input type="checkbox" switch>) déclenche le retour haptique du système.
+     Ailleurs, c’est sans effet. Coupé si l’appareil demande moins d’animations. */
+  const HAPTIC_PICK = [
+    "pick",
+    "toggle",
+    "cell",
+    "extog",
+    "exnone",
+    "rank",
+    "pron",
+    "l-pick",
+    "l-tog",
+    "l-cell",
+    "l-ex",
+    "l-exnone",
+    "l-rank",
+  ];
+  const hapticSwitch = (function () {
+    if (typeof navigator.vibrate === "function") return null;
+    const l = document.createElement("label");
+    l.setAttribute("aria-hidden", "true");
+    l.style.cssText =
+      "position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none";
+    const i = document.createElement("input");
+    i.type = "checkbox";
+    i.setAttribute("switch", "");
+    i.tabIndex = -1;
+    l.appendChild(i);
+    document.body.appendChild(l);
+    ac.signal.addEventListener("abort", function () {
+      l.remove();
+    });
+    return l;
+  })();
+  function haptic(strong) {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    try {
+      if (typeof navigator.vibrate === "function")
+        navigator.vibrate(strong ? [14, 70, 22] : 10);
+      else if (hapticSwitch) {
+        const a = document.activeElement;
+        hapticSwitch.click();
+        if (strong)
+          setTimeout(function () {
+            hapticSwitch.click();
+          }, 90);
+        if (a && a !== document.activeElement && a.focus)
+          a.focus({ preventScroll: true });
+      }
+    } catch (e) {}
+  }
+
+  /* ---------- Historique du navigateur ----------
+     Chaque étape (question, étape d’une question, bilan, coulisses) est une vraie entrée d’historique.
+     Le bouton ou le geste retour du téléphone revient donc à l’étape précédente, et sur iPhone
+     l’animation de glissement montre bien cette étape. Depuis l’accueil, le retour quitte le site. */
+  let restoring = false;
+  function navKey() {
+    const i = state.idx;
+    return {
+      idx: i,
+      sub: typeof i === "number" && i >= 0 && isSteps(Q[i]) ? state.sub || 0 : 0,
+    };
+  }
+  function syncHistory() {
+    if (restoring) return;
+    const cur = navKey(),
+      hs = history.state;
+    if (hs && hs.cc === 2 && hs.idx === cur.idx && hs.sub === cur.sub) return;
+    const prev = hs && hs.cc === 2 ? { idx: hs.idx, sub: hs.sub } : null;
+    history.pushState({ cc: 2, idx: cur.idx, sub: cur.sub, prev: prev }, "");
+  }
+  /* Le bouton Retour de l’app passe par l’historique quand l’étape précédente y est déjà. */
+  function goBackTo(t, fallback) {
+    const hs = history.state;
+    if (hs && hs.cc === 2 && hs.prev && hs.prev.idx === t.idx && hs.prev.sub === t.sub)
+      history.back();
+    else fallback();
+  }
+  function backTarget() {
+    const q = typeof state.idx === "number" ? Q[state.idx] : null;
+    if (isSteps(q) && (state.sub || 0) > 0)
+      return { idx: state.idx, sub: state.sub - 1 };
+    const j = nextIdx(state.idx === "results" ? Q.length : state.idx, -1);
+    const idx = j >= 0 ? j : -1;
+    return { idx: idx, sub: idx >= 0 && isSteps(Q[idx]) ? stepFor(Q[idx], true) : 0 };
+  }
   try {
     history.scrollRestoration = "manual";
   } catch (e) {}
-  if (!(history.state && history.state.cc === "guard")) {
-    history.replaceState({ cc: "base" }, "");
-    history.pushState({ cc: "guard" }, "");
+  {
+    const hs = history.state,
+      cur = navKey();
+    history.replaceState(
+      { cc: 2, idx: cur.idx, sub: cur.sub, prev: hs && hs.cc === 2 ? hs.prev : null },
+      "",
+    );
   }
   window.addEventListener(
     "popstate",
-    function () {
-      if (state.idx === -1) {
-        history.back();
-        return;
-      }
-      if (state.idx === "lab") {
-        state.idx = "results";
-        save();
-        render();
-        toTop();
-      } else back();
-      history.pushState({ cc: "guard" }, "");
+    function (e) {
+      const h = e.state;
+      if (!h || h.cc !== 2) return;
+      let idx = h.idx;
+      if ((idx === "results" || idx === "lab") && !Q.every(done)) idx = -1;
+      if (typeof idx === "number" && idx >= 0 && !Q[idx]) idx = -1;
+      state.idx = idx;
+      state.sub = h.sub || 0;
+      if (idx === "lab" && !state.play) state.play = clone(state.answers) || {};
+      save();
+      restoring = true;
+      render();
+      restoring = false;
+      toTop();
     },
     on,
   );

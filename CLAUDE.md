@@ -93,7 +93,8 @@ Variables dans les textes :
 - Pas de bouton « Ça ne me concerne pas » dans le bilan (retiré).
 - Pas d’en-tête sur l’accueil (le titre y est déjà).
 - Coulisses sur mobile : le sélecteur « Vos réponses / Le bilan » vit dans l’en-tête, et chaque onglet garde sa position de défilement.
-- Bouton retour du téléphone : une entrée « garde » dans l’historique fait reculer d’une étape dans l’app. Sur l’accueil, il quitte le site.
+- Historique : chaque étape (question, étape des ex, bilan, coulisses) est une vraie entrée (`syncHistory` dans `render`, `{cc: 2, idx, sub, prev}`). Le geste ou bouton retour du téléphone recule donc d’une étape, et sur iPhone le glissement montre la bonne page. Le bouton « Retour » de l’app passe par `history.back()` quand l’étape précédente est celle de l’historique (`goBackTo`). Depuis l’accueil, le retour quitte le site.
+- Retour haptique sur les choix et sur « Suivant » (plus marqué en arrivant au bilan). Android : `navigator.vibrate`. iPhone (iOS 18 et plus) : clic sur un `<input type="checkbox" switch>` caché. Coupé si l’appareil demande moins d’animations.
 - Ne jamais laisser un élément déborder en largeur. Un `::before` de 100vw faisait disparaître l’en-tête sur mobile : le viewport s’élargissait.
 
 ## Divers
