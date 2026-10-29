@@ -284,7 +284,10 @@ export function start() {
       ],
       opts: [
         { k: "ecoute", t: "Écouter : « D’accord, explique-moi »" },
-        { k: "justif", t: "Se justifier : « C’est pas ce que je voulais dire »" },
+        {
+          k: "justif",
+          t: "Se justifier : « C’est pas ce que je voulais dire »",
+        },
         { k: "renvoi", t: "Renvoyer la balle : « Et toi, quand tu… »" },
         { k: "minim", t: "Minimiser : « Tu exagères », « C’est pas grave »" },
         { k: "enerv", t: "S’énerver, le ton qui monte" },
@@ -1048,6 +1051,12 @@ export function start() {
       kind: "head",
       name: "Peut blesser",
       t: "Ces points méritent votre attention, quelle que soit la façon dont vous vivez votre couple.",
+    },
+    {
+      id: "head:nou",
+      kind: "head",
+      name: "Rien qui puisse blesser",
+      t: "Aucune de vos réponses ne fait ressortir de point « Peut blesser ». Les points « À regarder » ne sont pas des reproches : ce sont des sujets à vérifier entre vous, et ils peuvent très bien vous convenir.",
     },
     {
       id: "head:c",
@@ -3034,7 +3043,11 @@ export function start() {
             "</span> " +
             P(txT("head:u").t) +
             "</p>"
-          : "") +
+          : '<p class="nou"><span class="tago">' +
+            fr(txT("head:nou").name) +
+            "</span> " +
+            P(txT("head:nou").t) +
+            "</p>") +
         "</div>";
     h += themeSections(r, {});
     const rk = rankOf(state.answers),
@@ -4167,7 +4180,8 @@ export function start() {
             render();
             toTop();
           };
-          if (state.idx === "lab") goBackTo({ idx: "results", sub: 0 }, showResults);
+          if (state.idx === "lab")
+            goBackTo({ idx: "results", sub: 0 }, showResults);
           else showResults();
           break;
         }
@@ -4366,7 +4380,8 @@ export function start() {
     const i = state.idx;
     return {
       idx: i,
-      sub: typeof i === "number" && i >= 0 && isSteps(Q[i]) ? state.sub || 0 : 0,
+      sub:
+        typeof i === "number" && i >= 0 && isSteps(Q[i]) ? state.sub || 0 : 0,
     };
   }
   function syncHistory() {
@@ -4380,7 +4395,13 @@ export function start() {
   /* Le bouton Retour de l’app passe par l’historique quand l’étape précédente y est déjà. */
   function goBackTo(t, fallback) {
     const hs = history.state;
-    if (hs && hs.cc === 2 && hs.prev && hs.prev.idx === t.idx && hs.prev.sub === t.sub)
+    if (
+      hs &&
+      hs.cc === 2 &&
+      hs.prev &&
+      hs.prev.idx === t.idx &&
+      hs.prev.sub === t.sub
+    )
       history.back();
     else fallback();
   }
@@ -4390,7 +4411,10 @@ export function start() {
       return { idx: state.idx, sub: state.sub - 1 };
     const j = nextIdx(state.idx === "results" ? Q.length : state.idx, -1);
     const idx = j >= 0 ? j : -1;
-    return { idx: idx, sub: idx >= 0 && isSteps(Q[idx]) ? stepFor(Q[idx], true) : 0 };
+    return {
+      idx: idx,
+      sub: idx >= 0 && isSteps(Q[idx]) ? stepFor(Q[idx], true) : 0,
+    };
   }
   try {
     history.scrollRestoration = "manual";
@@ -4399,7 +4423,12 @@ export function start() {
     const hs = history.state,
       cur = navKey();
     history.replaceState(
-      { cc: 2, idx: cur.idx, sub: cur.sub, prev: hs && hs.cc === 2 ? hs.prev : null },
+      {
+        cc: 2,
+        idx: cur.idx,
+        sub: cur.sub,
+        prev: hs && hs.cc === 2 ? hs.prev : null,
+      },
       "",
     );
   }
